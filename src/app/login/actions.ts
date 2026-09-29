@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export async function signInWithEmail(formData: FormData) {
@@ -42,10 +43,11 @@ export async function signUpWithEmail(formData: FormData) {
 
 export async function resetPassword(formData: FormData) {
   const email = formData.get("email") as string;
+  const origin = (await headers()).get("origin") || "http://localhost:3000";
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? "" : ""}http://localhost:3000/auth/reset`,
+    redirectTo: `${origin}/auth/reset`,
   });
 
   if (error) {
@@ -60,11 +62,12 @@ export async function resetPassword(formData: FormData) {
 }
 
 export async function signInWithGoogle() {
+  const origin = (await headers()).get("origin") || "http://localhost:3000";
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: "http://localhost:3000/auth/callback",
+      redirectTo: `${origin}/auth/callback`,
     },
   });
 
