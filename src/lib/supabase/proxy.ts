@@ -25,27 +25,8 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
-
-  // Allow auth callback, login page, and API routes (they handle their own auth)
-  if (
-    pathname.startsWith("/auth") ||
-    pathname === "/login" ||
-    pathname.startsWith("/api/")
-  ) {
-    return supabaseResponse;
-  }
-
-  // Redirect to login if not authenticated
-  if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
+  // Refresh the session (updates cookies if needed)
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }
