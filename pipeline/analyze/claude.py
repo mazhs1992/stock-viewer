@@ -4,7 +4,7 @@ import anthropic
 import trafilatura
 import httpx
 
-from ..config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL
+from ..config import ANTHROPIC_API_KEY, ANTHROPIC_MODEL, ANTHROPIC_WORKSPACE_ID
 from .prompts import TICKER_SYSTEM, TICKER_TEMPLATE, MARKET_SYSTEM, MARKET_TEMPLATE
 
 
@@ -21,7 +21,10 @@ def analyze_all(
     - market_analysis: {mood, summary, market_note}
     - tokens: {input, output}
     """
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    kwargs: dict = {"api_key": ANTHROPIC_API_KEY}
+    if ANTHROPIC_WORKSPACE_ID:
+        kwargs["default_headers"] = {"anthropic-workspace-id": ANTHROPIC_WORKSPACE_ID}
+    client = anthropic.Anthropic(**kwargs)
     total_in = 0
     total_out = 0
     judgments = {}

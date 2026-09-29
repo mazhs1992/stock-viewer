@@ -42,26 +42,28 @@ def store_results(
 
 def _store_prices(client, collected: dict, trading_date: str):
     """Upsert prices from collected closes."""
-    rows = []
+    seen: dict[tuple[str, str], dict] = {}
     for ticker, data in collected.items():
-        # Current price
-        if data.get("price"):
-            rows.append({
-                "ticker": ticker,
-                "date": trading_date,
-                "close": data["price"],
-                "source_id": data.get("source_ids", {}).get("quote"),
-            })
-        # Historical closes
+        # Historical closes first (lower priority)
         for c in data.get("closes_dated", []):
-            rows.append({
+            key = (ticker, c["date"])
+            seen[key] = {
                 "ticker": ticker,
                 "date": c["date"],
                 "close": c["close"],
                 "source_id": data.get("source_ids", {}).get("closes"),
-            })
+            }
+        # Current price overwrites if same date
+        if data.get("price"):
+            key = (ticker, trading_date)
+            seen[key] = {
+                "ticker": ticker,
+                "date": trading_date,
+                "close": data["price"],
+                "source_id": data.get("source_ids", {}).get("quote"),
+            }
+    rows = list(seen.values())
     if rows:
-        # Batch in chunks to avoid too-large payloads
         for i in range(0, len(rows), 100):
             client.table("prices_daily").upsert(
                 rows[i:i+100], on_conflict="ticker,date"
