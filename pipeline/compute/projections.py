@@ -23,8 +23,9 @@ CAL_DAYS = {"d1": 1, "w1": 7, "m1": 30, "m3": 91, "m6": 182, "y1": 365}
 # Grace days: how late an outcome can arrive
 GRACE = {"d1": 4, "w1": 4, "m1": 5, "m3": 7, "m6": 10, "y1": 10}
 
-# News tilt per score point
-TILT = {"d1": 0.005, "w1": 0.005, "m1": 0.01, "m3": 0.0, "m6": 0.0, "y1": 0.0}
+# News tilt per score point (score range: -10 to +10)
+# Example: score=+5 with d1 tilt=0.008 → +4% drift adjustment
+TILT = {"d1": 0.008, "w1": 0.01, "m1": 0.015, "m3": 0.01, "m6": 0.005, "y1": 0.0}
 
 
 def realised_vol(closes: list[float | None]) -> float | None:

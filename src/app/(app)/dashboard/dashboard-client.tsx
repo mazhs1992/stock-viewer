@@ -110,16 +110,22 @@ export function DashboardClient({
                           </TableCell>
                         );
                       }
+                      const pctBear = ((proj.bear - pred.price0) / pred.price0) * 100;
+                      const pctBase = ((proj.base - pred.price0) / pred.price0) * 100;
+                      const pctBull = ((proj.bull - pred.price0) / pred.price0) * 100;
+                      const baseColor = pctBase >= 0
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-600 dark:text-red-400";
                       return (
                         <TableCell key={h} className="text-center text-xs font-mono">
-                          <div className="text-red-500 dark:text-red-400">
-                            {proj.bear.toFixed(1)}
+                          <div className="text-red-500/70 dark:text-red-400/70">
+                            {pctBear >= 0 ? "+" : ""}{pctBear.toFixed(1)}%
                           </div>
-                          <div className="font-semibold">
-                            {proj.base.toFixed(1)}
+                          <div className={`font-semibold ${baseColor}`}>
+                            {pctBase >= 0 ? "+" : ""}{pctBase.toFixed(1)}%
                           </div>
-                          <div className="text-green-500 dark:text-green-400">
-                            {proj.bull.toFixed(1)}
+                          <div className="text-green-500/70 dark:text-green-400/70">
+                            {pctBull >= 0 ? "+" : ""}{pctBull.toFixed(1)}%
                           </div>
                         </TableCell>
                       );
