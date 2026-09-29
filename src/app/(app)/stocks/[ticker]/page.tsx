@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/auth";
 import { StockClient } from "./stock-client";
 
 export default async function StockPage({
@@ -8,7 +8,7 @@ export default async function StockPage({
   params: Promise<{ ticker: string }>;
 }) {
   const { ticker } = await params;
-  const supabase = await createClient();
+  const { supabase } = await verifySession();
 
   // Check asset exists
   const { data: asset } = await supabase

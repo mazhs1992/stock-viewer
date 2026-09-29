@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/auth";
 import { WatchlistClient } from "./watchlist-client";
 
 export default async function WatchlistPage() {
-  const supabase = await createClient();
+  const { supabase, profile } = await verifySession();
 
   // Load assets
   const { data: assets } = await supabase
@@ -63,16 +63,6 @@ export default async function WatchlistPage() {
     }
   }
 
-  // Get user profile for role check
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("user_id", user!.id)
-    .single();
-
   return (
     <WatchlistClient
       assets={assets || []}
@@ -80,7 +70,7 @@ export default async function WatchlistPage() {
       judgments={latestJudgments}
       market={market}
       sparklines={sparklines}
-      userRole={profile?.role || "member"}
+      userRole={profile.role}
     />
   );
 }

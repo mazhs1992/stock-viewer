@@ -1,23 +1,9 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/auth";
 import { AppNav } from "@/components/app-nav";
 import { signOut } from "../actions";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("email, role")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!profile) redirect("/login");
+  const { profile } = await verifySession();
 
   return (
     <div className="flex min-h-screen flex-col">

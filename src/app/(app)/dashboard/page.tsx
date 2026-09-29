@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/auth";
 import { DashboardClient } from "./dashboard-client";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const { supabase } = await verifySession();
 
   // Load active assets
   const { data: assets } = await supabase

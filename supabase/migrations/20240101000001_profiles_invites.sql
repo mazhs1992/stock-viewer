@@ -23,42 +23,54 @@ create table profiles (
 
 alter table profiles enable row level security;
 
--- RLS policies: any active user can read
-create policy "Active users can read invites"
-  on invites for select
-  using (
-    exists (
-      select 1 from profiles
-      where profiles.user_id = auth.uid() and profiles.active = true
-    )
+-- Helper functions (SECURITY DEFINER to bypass RLS and avoid recursion)
+create or replace function public.is_active_user()
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where user_id = auth.uid() and active = true
   );
+$$;
 
-create policy "Admins can manage invites"
-  on invites for all
-  using (
-    exists (
-      select 1 from profiles
-      where profiles.user_id = auth.uid() and profiles.role = 'admin' and profiles.active = true
-    )
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where user_id = auth.uid() and role = 'admin' and active = true
   );
+$$;
 
-create policy "Active users can read profiles"
+-- Profiles RLS policies
+create policy "Users can read own profile"
   on profiles for select
-  using (
-    exists (
-      select 1 from profiles
-      where profiles.user_id = auth.uid() and profiles.active = true
-    )
-  );
+  using (user_id = auth.uid());
+
+create policy "Active users can read all profiles"
+  on profiles for select
+  using (public.is_active_user());
 
 create policy "Admins can manage profiles"
   on profiles for all
-  using (
-    exists (
-      select 1 from profiles
-      where profiles.user_id = auth.uid() and profiles.role = 'admin' and profiles.active = true
-    )
-  );
+  using (public.is_admin());
+
+-- Invites RLS policies
+create policy "Active users can read invites"
+  on invites for select
+  using (public.is_active_user());
+
+create policy "Admins can manage invites"
+  on invites for all
+  using (public.is_admin());
 
 -- Invite-only enforcement trigger
 -- On auth.users insert: check invites, create profile or reject

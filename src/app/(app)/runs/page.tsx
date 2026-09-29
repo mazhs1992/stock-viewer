@@ -1,23 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/auth";
 import { RunsClient } from "./runs-client";
 
 export default async function RunsPage() {
-  const supabase = await createClient();
+  const { supabase, profile } = await verifySession();
 
   const { data: runs } = await supabase
     .from("runs")
     .select("*")
     .order("started_at", { ascending: false })
     .limit(50);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("user_id", user!.id)
-    .single();
 
   // Monthly cost totals
   const allRuns = runs || [];
@@ -31,7 +22,7 @@ export default async function RunsPage() {
   return (
     <RunsClient
       runs={allRuns}
-      isAdmin={profile?.role === "admin"}
+      isAdmin={profile.role === "admin"}
       monthlyCosts={monthlyCosts}
     />
   );

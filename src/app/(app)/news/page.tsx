@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { verifySession } from "@/lib/auth";
 import { NewsClient } from "./news-client";
 
 export default async function NewsPage({
@@ -7,7 +7,7 @@ export default async function NewsPage({
   searchParams: Promise<{ date?: string }>;
 }) {
   const { date: dateParam } = await searchParams;
-  const supabase = await createClient();
+  const { supabase } = await verifySession();
 
   // Get available dates
   const { data: dates } = await supabase
