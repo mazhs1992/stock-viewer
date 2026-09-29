@@ -1,5 +1,6 @@
 # Stock Viewer
 
+
 Invite-only stock watchlist με AI ανάλυση (Claude), lognormal projections και accuracy tracking.
 
 ## Prerequisites
