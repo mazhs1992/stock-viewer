@@ -36,6 +36,12 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# backups
+/backups
+
+# pipeline venv
+/pipeline/.venv
+
 # vercel
 .vercel
 

@@ -29,20 +29,13 @@ export default async function UsersPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b px-4 py-3">
-        <h1 className="text-lg font-semibold">Διαχείριση χρηστών</h1>
-      </header>
-      <main className="flex-1 space-y-8 p-4">
-        <UsersClient
-          profiles={profiles ?? []}
-          invites={invites ?? []}
-          currentUserId={user.id}
-        />
-      </main>
-      <footer className="border-t px-4 py-2 text-center text-xs text-muted-foreground">
-        Δεν αποτελεί επενδυτική συμβουλή.
-      </footer>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Διαχείριση χρηστών</h1>
+      <UsersClient
+        profiles={profiles ?? []}
+        invites={invites ?? []}
+        currentUserId={user.id}
+      />
     </div>
   );
 }

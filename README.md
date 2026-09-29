@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Stock Viewer
 
-## Getting Started
+Invite-only stock watchlist με AI ανάλυση (Claude), lognormal projections και accuracy tracking.
 
-First, run the development server:
+## Prerequisites
+
+- **Node.js** >= 20
+- **Python** >= 3.12
+- **Docker Desktop** (για local Supabase)
+- **Supabase CLI** (`npm i -g supabase`)
+
+## Local Setup
 
 ```bash
+# 1. Clone & install
+cd app
+npm install
+
+# 2. Python pipeline venv
+cd pipeline
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cd ..
+
+# 3. Start local Supabase
+supabase start
+# Σημείωσε τα ANON_KEY, SERVICE_ROLE_KEY, URL από το output
+
+# 4. Environment
+cp .env.example .env.local
+# Συμπλήρωσε τα keys από το supabase start output:
+#   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+#   SUPABASE_SERVICE_ROLE_KEY=...
+
+# 5. Reset DB (migrations + seeds)
+supabase db reset
+
+# 6. (Προαιρετικά) Import legacy data
+source pipeline/.venv/bin/activate
+python scripts/import_legacy.py
+
+# 7. Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# -> http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## First Login
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Το seed δημιουργεί invite για τον admin. Πήγαινε στο `http://localhost:3000/login`, κάνε register με το email που έβαλες στο seed (`baggos92maz@gmail.com`). Το confirmation email βρίσκεται στο local mailbox: `http://127.0.0.1:54324`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Pipeline
 
-## Learn More
+```bash
+source pipeline/.venv/bin/activate
 
-To learn more about Next.js, take a look at the following resources:
+# Mock run (χωρίς API keys)
+python -m pipeline --kind manual --ticker MU --mock
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Real run (χρειάζεται FINNHUB_API_KEY, TWELVEDATA_API_KEY, ANTHROPIC_API_KEY στο .env.local)
+python -m pipeline --kind manual --ticker MU
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Full cron run
+python -m pipeline --kind cron
 
-## Deploy on Vercel
+# Ο δεύτερος cron run για την ίδια trading date βγαίνει "already done"
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Manual Trigger (UI)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Στη σελίδα `/runs`, ο admin μπορεί να πατήσει "Τρέξε τώρα". Με `TRIGGER_MODE=local` στο `.env.local`, τρέχει τo pipeline σαν child process.
+
+## DB Backup
+
+```bash
+./scripts/dump_local.sh
+# -> backups/local_YYYYMMDD_HHMMSS.sql
+```
+
+## Structure
+
+```
+app/
+├── src/                  # Next.js app
+│   ├── app/(app)/        # Authenticated pages (watchlist, dashboard, stocks, news, sources, runs, users)
+│   ├── app/login/        # Login page
+│   ├── app/api/          # API routes (trigger, runs)
+│   ├── components/       # Shared components (nav, sparkline, fan-chart, theme)
+│   └── lib/supabase/     # Supabase client helpers
+├── pipeline/             # Python data pipeline
+│   ├── collect/          # Finnhub, Twelve Data, market data, mock
+│   ├── analyze/          # Claude analysis, prompts, mock
+│   ├── compute/          # Projections (lognormal), accuracy
+│   └── store/            # DB writers
+├── supabase/
+│   ├── migrations/       # 4 migration files (tables, RLS, triggers)
+│   └── seed.sql          # Admin invite, 5 assets, 5 sources
+├── scripts/
+│   ├── import_legacy.py  # Legacy data import
+│   └── dump_local.sh     # DB backup
+└── legacy/data/          # Legacy JSON data (snapshots, days, stocks)
+```
+
+## Notes
+
+- **Email/password login** λειτουργεί locally με Mailpit (`http://127.0.0.1:54324`).
+- **Google login** ρυθμίζεται στο Phase 6 (deploy) -- χρειάζεται Google Cloud OAuth client.
+- Για custom SMTP (email πέρα από localhost), ρύθμισε στο Supabase dashboard -> Auth -> SMTP.
+- Η εφαρμογή είναι invite-only: μόνο emails στον πίνακα `invites` μπορούν να κάνουν register.

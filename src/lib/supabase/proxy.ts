@@ -31,8 +31,12 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Allow auth callback and login page
-  if (pathname.startsWith("/auth") || pathname === "/login") {
+  // Allow auth callback, login page, and API routes (they handle their own auth)
+  if (
+    pathname.startsWith("/auth") ||
+    pathname === "/login" ||
+    pathname.startsWith("/api/")
+  ) {
     return supabaseResponse;
   }
 

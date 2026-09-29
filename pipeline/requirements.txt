@@ -1,0 +1,6 @@
+supabase==2.15.2
+anthropic==0.52.0
+httpx==0.28.1
+trafilatura==2.0.0
+pandas-market-calendars==4.6.1
+python-dotenv==1.1.0
