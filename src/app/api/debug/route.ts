@@ -1,26 +1,38 @@
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
-
   const supabase = await createClient();
+
+  // Step 1: getUser (same as layout)
   const {
     data: { user },
-    error,
+    error: userError,
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    return Response.json({ step: "getUser", failed: true, error: userError?.message });
+  }
+
+  // Step 2: query profile (same as layout)
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("email, role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!profile) {
+    return Response.json({
+      step: "profile",
+      failed: true,
+      userId: user.id,
+      error: profileError?.message,
+      code: profileError?.code,
+    });
+  }
+
   return Response.json({
-    cookieCount: allCookies.length,
-    cookieNames: allCookies.map((c) => c.name),
-    user: user ? { id: user.id, email: user.email } : null,
-    error: error?.message || null,
-    envCheck: {
-      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasAnon: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      urlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30),
-      anonPrefix: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 10),
-    },
+    step: "all_ok",
+    user: { id: user.id, email: user.email },
+    profile,
   });
 }
