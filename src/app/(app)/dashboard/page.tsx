@@ -12,14 +12,21 @@ export default async function DashboardPage() {
     .order("ticker");
   const tickers = (assets || []).map((a) => a.ticker);
 
-  // Load latest predictions per ticker (all horizons, latest date)
-  const { data: predictions } = await supabase
-    .from("predictions")
-    .select("ticker, date, horizon, run_kind, price0, bear, base, bull, vol, mu, score")
-    .in("ticker", tickers)
-    .order("date", { ascending: false });
+  // Load predictions + accuracy in parallel
+  const [{ data: predictions }, { data: accuracy }] = await Promise.all([
+    supabase
+      .from("predictions")
+      .select("ticker, date, horizon, run_kind, price0, bear, base, bull, vol, mu, score")
+      .in("ticker", tickers)
+      .order("date", { ascending: false }),
+    supabase
+      .from("accuracy")
+      .select("*")
+      .order("scope")
+      .order("horizon"),
+  ]);
 
-  // Group by ticker: latest cron predictions
+  // Group by ticker: latest predictions
   const latestPredictions: Record<
     string,
     {
@@ -33,7 +40,6 @@ export default async function DashboardPage() {
   > = {};
 
   for (const p of predictions || []) {
-    if (p.run_kind !== "cron") continue;
     if (!latestPredictions[p.ticker]) {
       latestPredictions[p.ticker] = {
         date: p.date,
@@ -44,7 +50,6 @@ export default async function DashboardPage() {
         horizons: {},
       };
     }
-    // Only take the latest date
     if (p.date === latestPredictions[p.ticker].date) {
       latestPredictions[p.ticker].horizons[p.horizon] = {
         bear: p.bear,
@@ -53,13 +58,6 @@ export default async function DashboardPage() {
       };
     }
   }
-
-  // Load accuracy
-  const { data: accuracy } = await supabase
-    .from("accuracy")
-    .select("*")
-    .order("scope")
-    .order("horizon");
 
   return (
     <DashboardClient

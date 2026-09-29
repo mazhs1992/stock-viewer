@@ -19,51 +19,27 @@ export default async function StockPage({
 
   if (!asset) notFound();
 
-  // Load latest fundamentals
-  const { data: fundamentals } = await supabase
-    .from("fundamentals_daily")
-    .select("*")
-    .eq("ticker", ticker)
-    .order("date", { ascending: false })
-    .limit(30);
-
-  // Load prices (last 90 days)
-  const { data: prices } = await supabase
-    .from("prices_daily")
-    .select("date, close")
-    .eq("ticker", ticker)
-    .order("date", { ascending: false })
-    .limit(90);
-
-  // Load predictions
-  const { data: predictions } = await supabase
-    .from("predictions")
-    .select("*")
-    .eq("ticker", ticker)
-    .order("date", { ascending: false })
-    .limit(100);
-
-  // Load judgments (daily timeline)
-  const { data: judgments } = await supabase
-    .from("judgments")
-    .select("*")
-    .eq("ticker", ticker)
-    .order("date", { ascending: false })
-    .limit(30);
-
-  // Load news
-  const { data: news } = await supabase
-    .from("news_items")
-    .select("*")
-    .eq("ticker", ticker)
-    .order("date", { ascending: false })
-    .limit(50);
-
-  // Load accuracy for this ticker
-  const { data: accuracy } = await supabase
-    .from("accuracy")
-    .select("*")
-    .eq("scope", ticker);
+  // Load all ticker data in parallel
+  const [
+    { data: fundamentals },
+    { data: prices },
+    { data: predictions },
+    { data: judgments },
+    { data: news },
+    { data: accuracy },
+  ] = await Promise.all([
+    supabase.from("fundamentals_daily").select("*").eq("ticker", ticker)
+      .order("date", { ascending: false }).limit(30),
+    supabase.from("prices_daily").select("date, close").eq("ticker", ticker)
+      .order("date", { ascending: false }).limit(90),
+    supabase.from("predictions").select("*").eq("ticker", ticker)
+      .order("date", { ascending: false }).limit(100),
+    supabase.from("judgments").select("*").eq("ticker", ticker)
+      .order("date", { ascending: false }).limit(30),
+    supabase.from("news_items").select("*").eq("ticker", ticker)
+      .order("date", { ascending: false }).limit(50),
+    supabase.from("accuracy").select("*").eq("scope", ticker),
+  ]);
 
   return (
     <StockClient
