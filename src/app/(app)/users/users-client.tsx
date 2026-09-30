@@ -49,6 +49,7 @@ export function UsersClient({
       {/* Active users */}
       <section>
         <h2 className="mb-3 text-base font-medium">Χρήστες</h2>
+        <div className="rounded-xl border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -112,6 +113,7 @@ export function UsersClient({
             ))}
           </TableBody>
         </Table>
+        </div>
       </section>
 
       {/* Pending invites */}
@@ -122,6 +124,7 @@ export function UsersClient({
             Δεν υπάρχουν εκκρεμείς προσκλήσεις.
           </p>
         ) : (
+          <div className="rounded-xl border bg-card shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -153,6 +156,7 @@ export function UsersClient({
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </section>
 

@@ -108,7 +108,7 @@ export function WatchlistClient({
     <div className="space-y-6">
       {/* Market bar */}
       {market && (
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border p-3 text-sm">
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-card shadow-sm p-3 text-sm">
           {market.mood && (
             <div>
               <span className="text-muted-foreground">Κλίμα: </span>
@@ -174,7 +174,7 @@ export function WatchlistClient({
       </div>
 
       {/* Table */}
-      <div className="rounded-md border">
+      <div className="rounded-xl border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

@@ -69,7 +69,7 @@ export function DashboardClient({
       {/* Projections */}
       <section>
         <h2 className="text-lg font-semibold mb-4">Προβλέψεις</h2>
-        <div className="rounded-md border overflow-x-auto">
+        <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

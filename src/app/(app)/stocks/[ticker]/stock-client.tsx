@@ -378,7 +378,7 @@ export function StockClient({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

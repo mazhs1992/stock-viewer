@@ -66,7 +66,7 @@ export function SourcesClient({
         Προσθήκη νέας πηγής χρειάζεται και code adapter στο pipeline.
       </p>
 
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-xl border bg-card shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
