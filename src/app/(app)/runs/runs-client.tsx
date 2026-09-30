@@ -13,20 +13,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-function statusBadge(status: string) {
+function statusBadge(status: string, startedAt: string | null) {
   switch (status) {
     case "ok":
-      return <Badge variant="default">OK</Badge>;
+      return (
+        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-0">
+          OK
+        </Badge>
+      );
     case "running":
       return (
         <Badge variant="secondary" className="animate-pulse">
           Εκτέλεση...
         </Badge>
       );
-    case "queued":
-      return <Badge variant="outline">Αναμονή</Badge>;
+    case "queued": {
+      // If queued for more than 10 minutes, show as stale
+      const isStale =
+        startedAt &&
+        Date.now() - new Date(startedAt).getTime() > 10 * 60 * 1000;
+      return (
+        <Badge
+          variant="outline"
+          className={isStale ? "border-yellow-500 text-yellow-600 dark:text-yellow-400" : ""}
+        >
+          {isStale ? "Εκκρεμεί" : "Αναμονή"}
+        </Badge>
+      );
+    }
     case "partial":
-      return <Badge className="bg-yellow-500">Μερικό</Badge>;
+      return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white border-0">Μερικό</Badge>;
     case "failed":
       return <Badge variant="destructive">Αποτυχία</Badge>;
     default:
@@ -41,6 +57,18 @@ function duration(start: string | null, end: string | null): string {
   const secs = Math.round((e - s) / 1000);
   if (secs < 60) return `${secs}s`;
   return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+}
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("el-GR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 type Run = {
@@ -107,7 +135,6 @@ export function RunsClient({
       if (!resp.ok) {
         setTriggerError(data.error || "Αποτυχία");
       } else {
-        // Add the new run to the list
         setRuns((prev) => [
           {
             id: data.run_id,
@@ -132,6 +159,11 @@ export function RunsClient({
     setTriggering(false);
   }
 
+  const totalTokens = (r: Run) => {
+    const t = (r.tokens_in || 0) + (r.tokens_out || 0);
+    return t > 0 ? `${(t / 1000).toFixed(1)}k` : null;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -153,8 +185,8 @@ export function RunsClient({
         <p className="text-sm text-destructive">{triggerError}</p>
       )}
 
-      {/* Monthly costs */}
-      {Object.keys(monthlyCosts).length > 0 && (
+      {/* Monthly costs — only show if there's actual cost */}
+      {Object.values(monthlyCosts).some((c) => c > 0) && (
         <div className="flex flex-wrap gap-4">
           {Object.entries(monthlyCosts)
             .sort()
@@ -184,14 +216,11 @@ export function RunsClient({
             <TableRow>
               <TableHead>Τύπος</TableHead>
               <TableHead>Scope</TableHead>
-              <TableHead>Ημ/νία</TableHead>
+              <TableHead>Ημ/νία & Ώρα</TableHead>
               <TableHead className="text-center">Κατάσταση</TableHead>
               <TableHead className="text-right">Διάρκεια</TableHead>
               <TableHead className="text-right hidden sm:table-cell">
                 Tokens
-              </TableHead>
-              <TableHead className="text-right hidden sm:table-cell">
-                Κόστος
               </TableHead>
               <TableHead className="hidden md:table-cell">Σφάλματα</TableHead>
             </TableRow>
@@ -203,20 +232,17 @@ export function RunsClient({
                   <Badge variant="outline">{r.kind}</Badge>
                 </TableCell>
                 <TableCell className="font-mono text-sm">{r.scope}</TableCell>
-                <TableCell className="text-sm">{r.trading_date}</TableCell>
+                <TableCell className="text-sm">
+                  {formatDateTime(r.started_at)}
+                </TableCell>
                 <TableCell className="text-center">
-                  {statusBadge(r.status)}
+                  {statusBadge(r.status, r.started_at)}
                 </TableCell>
                 <TableCell className="text-right text-xs font-mono">
-                  {duration(r.started_at, r.finished_at)}
+                  {r.status === "queued" ? "—" : duration(r.started_at, r.finished_at)}
                 </TableCell>
                 <TableCell className="text-right text-xs font-mono hidden sm:table-cell">
-                  {r.tokens_in != null
-                    ? `${((r.tokens_in + (r.tokens_out || 0)) / 1000).toFixed(1)}k`
-                    : "—"}
-                </TableCell>
-                <TableCell className="text-right text-xs font-mono hidden sm:table-cell">
-                  {r.cost_usd != null ? `$${r.cost_usd.toFixed(4)}` : "—"}
+                  {totalTokens(r) || "—"}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[200px] truncate">
                   {r.errors
@@ -235,7 +261,7 @@ export function RunsClient({
             {runs.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={7}
                   className="text-center py-8 text-muted-foreground"
                 >
                   Δεν υπάρχουν εκτελέσεις.
