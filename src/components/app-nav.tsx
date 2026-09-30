@@ -43,8 +43,8 @@ export function AppNav({
               key={item.href}
               href={item.href}
               onClick={onClick}
-              className={`text-sm font-medium transition-colors hover:text-foreground ${
-                active ? "text-foreground" : "text-muted-foreground"
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                active ? "text-primary" : "text-muted-foreground"
               }`}
             >
               {item.label}
@@ -56,7 +56,7 @@ export function AppNav({
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4 gap-4">
         {/* Mobile menu */}
         <Sheet open={open} onOpenChange={setOpen}>
@@ -85,8 +85,8 @@ export function AppNav({
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="font-semibold whitespace-nowrap">
-          Stock Viewer
+        <Link href="/" className="font-semibold whitespace-nowrap tracking-tight">
+          <span className="text-primary">Stock</span> Viewer
         </Link>
 
         {/* Desktop nav */}

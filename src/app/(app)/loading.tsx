@@ -2,7 +2,7 @@ export default function Loading() {
   return (
     <div className="flex items-center justify-center py-24">
       <svg
-        className="h-8 w-8 animate-spin text-muted-foreground"
+        className="h-8 w-8 animate-spin text-primary"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
