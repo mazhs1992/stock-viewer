@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FanChart } from "@/components/fan-chart";
+import Link from "next/link";
 
 const HORIZONS = ["d1", "w1", "m1", "m3", "m6", "y1"] as const;
 const HORIZON_LABELS: Record<string, string> = {
@@ -88,7 +89,11 @@ export function DashboardClient({
                 if (!pred) {
                   return (
                     <TableRow key={asset.ticker}>
-                      <TableCell className="font-medium">{asset.ticker}</TableCell>
+                      <TableCell className="font-medium">
+                      <Link href={`/stocks/${asset.ticker}`} className="hover:underline">
+                        {asset.ticker}
+                      </Link>
+                    </TableCell>
                       <TableCell colSpan={HORIZONS.length + 2} className="text-muted-foreground text-center">
                         Δεν υπάρχουν προβλέψεις
                       </TableCell>
@@ -97,7 +102,11 @@ export function DashboardClient({
                 }
                 return (
                   <TableRow key={asset.ticker}>
-                    <TableCell className="font-medium">{asset.ticker}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/stocks/${asset.ticker}`} className="hover:underline">
+                        {asset.ticker}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-right font-mono">
                       ${pred.price0.toFixed(2)}
                     </TableCell>
@@ -143,6 +152,21 @@ export function DashboardClient({
               })}
             </TableBody>
           </Table>
+        </div>
+
+        <div className="mt-3 rounded-md border border-muted bg-muted/30 px-4 py-3 text-xs text-muted-foreground space-y-1">
+          <p>
+            <span className="font-medium text-foreground/70">Bear / Base / Bull</span>{" "}
+            — Απαισιόδοξο, αναμενόμενο και αισιόδοξο σενάριο (10ο / 50ό / 90ό εκατοστημόριο).
+          </p>
+          <p>
+            Τα ποσοστά δείχνουν την αναμενόμενη μεταβολή από την τρέχουσα τιμή.
+            Βασίζονται σε ιστορική μεταβλητότητα, αναλυτικούς στόχους και AI ανάλυση ειδήσεων.
+          </p>
+          <p>
+            Η στήλη <span className="font-medium text-foreground/70">Chart</span> απεικονίζει
+            γραφικά το εύρος bear–bull ανά ορίζοντα.
+          </p>
         </div>
       </section>
 

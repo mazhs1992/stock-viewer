@@ -48,11 +48,19 @@ export default async function NewsPage({
     assetNames[a.ticker] = a.name;
   }
 
+  // Keep only the latest judgment per ticker (highest importance wins)
+  const seenTickers = new Set<string>();
+  const uniqueJudgments = (judgments || []).filter((j) => {
+    if (seenTickers.has(j.ticker)) return false;
+    seenTickers.add(j.ticker);
+    return true;
+  });
+
   return (
     <NewsClient
       dates={uniqueDates}
       selectedDate={selectedDate}
-      judgments={judgments || []}
+      judgments={uniqueJudgments}
       news={news || []}
       market={marketArr?.[0] || null}
       assetNames={assetNames}

@@ -28,6 +28,7 @@ export function NewsClient({
   dates: string[];
   selectedDate: string;
   judgments: {
+    id?: number;
     ticker: string;
     summary: string;
     sentiment: number;
@@ -102,10 +103,10 @@ export function NewsClient({
         </p>
       )}
 
-      {judgments.map((j) => {
+      {judgments.map((j, idx) => {
         const tickerNews = news.filter((n) => n.ticker === j.ticker);
         return (
-          <Card key={j.ticker}>
+          <Card key={j.id ?? `${j.ticker}-${idx}`}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">

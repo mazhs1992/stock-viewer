@@ -37,6 +37,22 @@ function scoreColor(score: number): string {
   return "text-muted-foreground";
 }
 
+function sentimentLabel(s: number): string {
+  if (s >= 2) return "Πολύ θετικό";
+  if (s === 1) return "Θετικό";
+  if (s === 0) return "Ουδέτερο";
+  if (s === -1) return "Αρνητικό";
+  return "Πολύ αρνητικό";
+}
+
+function ratingLabel(r: number): string {
+  if (r >= 4.5) return "Strong Buy";
+  if (r >= 3.5) return "Buy";
+  if (r >= 2.5) return "Hold";
+  if (r >= 1.5) return "Sell";
+  return "Strong Sell";
+}
+
 export function StockClient({
   asset,
   fundamentals,
@@ -105,11 +121,16 @@ export function StockClient({
   }[];
 }) {
   const latest = fundamentals[0];
+  const latestJudgment = judgments[0];
+
+  // Group predictions by date to get latest set
+  const latestPredDate = predictions[0]?.date;
+  const latestPreds = predictions.filter((p) => p.date === latestPredDate);
 
   // Build price chart data with prediction bands overlaid
   const chartData = prices.map((p) => {
     const cronPreds = predictions.filter(
-      (pr) => pr.run_kind === "cron" && pr.date === p.date && pr.horizon === "m1"
+      (pr) => pr.date === p.date && pr.horizon === "m1"
     );
     const pred = cronPreds[0];
     return {
@@ -120,6 +141,18 @@ export function StockClient({
       bull: pred?.bull,
     };
   });
+
+  // 52w range position
+  const rangePosition =
+    latest?.low52 && latest?.high52 && latest.high52 !== latest.low52
+      ? ((latest.price - latest.low52) / (latest.high52 - latest.low52)) * 100
+      : null;
+
+  // Target upside/downside
+  const targetPct =
+    latest?.target && latest.price
+      ? ((latest.target - latest.price) / latest.price) * 100
+      : null;
 
   return (
     <div className="space-y-6">
@@ -154,11 +187,260 @@ export function StockClient({
         )}
       </div>
 
+      {/* Info cards row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Company info */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Εταιρεία</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Κλάδος</span>
+              <span>{asset.sector || "—"}</span>
+            </div>
+            {latest && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">P/E</span>
+                  <span className="font-mono">{latest.pe?.toFixed(1) ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Forward P/E</span>
+                  <span className="font-mono">{latest.fpe?.toFixed(1) ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Beta</span>
+                  <span className="font-mono">{latest.beta?.toFixed(2) ?? "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Επόμ. κέρδη</span>
+                  <span className="font-mono">{latest.next_earnings ?? "—"}</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Analyst consensus */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Αναλυτές</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {latest ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Σύσταση</span>
+                  <span className="font-medium">
+                    {latest.rating
+                      ? `${ratingLabel(latest.rating)} (${latest.rating.toFixed(1)})`
+                      : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Στόχος τιμής</span>
+                  <span className="font-mono">
+                    {latest.target ? (
+                      <>
+                        ${latest.target.toFixed(2)}{" "}
+                        <span
+                          className={
+                            targetPct && targetPct >= 0
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                          }
+                        >
+                          ({targetPct && targetPct >= 0 ? "+" : ""}
+                          {targetPct?.toFixed(1)}%)
+                        </span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Αναλυτές</span>
+                  <span className="font-mono">{latest.analysts ?? "—"}</span>
+                </div>
+                {/* 52w range bar */}
+                {latest.low52 && latest.high52 && (
+                  <div className="pt-1">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>${latest.low52.toFixed(0)}</span>
+                      <span className="text-[10px]">52 εβδ.</span>
+                      <span>${latest.high52.toFixed(0)}</span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-muted">
+                      {rangePosition != null && (
+                        <div
+                          className="absolute top-0 h-2 w-2 rounded-full bg-foreground"
+                          style={{ left: `calc(${Math.min(100, Math.max(0, rangePosition))}% - 4px)` }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-muted-foreground">Δεν υπάρχουν δεδομένα.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Latest AI judgment */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">AI Ανάλυση</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {latestJudgment ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Score</span>
+                  <span className={`font-bold ${scoreColor(latestJudgment.score)}`}>
+                    {latestJudgment.score > 0 ? `+${latestJudgment.score}` : latestJudgment.score}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Sentiment</span>
+                  <span className={scoreColor(latestJudgment.sentiment)}>
+                    {sentimentLabel(latestJudgment.sentiment)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Σημασία</span>
+                  <span>{latestJudgment.importance}/5</span>
+                </div>
+                {latestJudgment.is_event && (
+                  <Badge variant="destructive" className="mt-1">EVENT</Badge>
+                )}
+                {latestJudgment.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {latestJudgment.tags.map((t) => (
+                      <Badge key={t} variant="outline" className="text-[10px]">
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground pt-1">
+                  {latestJudgment.date}
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">Δεν υπάρχει ανάλυση ακόμα.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AI summary block */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-sm">Τι λέει ο Claude</CardTitle>
+            {latestJudgment && (
+              <span className="text-xs text-muted-foreground">
+                ({latestJudgment.date})
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {latestJudgment?.summary ? (
+            <>
+              <p className="text-sm">{latestJudgment.summary}</p>
+              {latestJudgment.why && (
+                <p className="text-xs text-muted-foreground italic">
+                  {latestJudgment.why}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Δεν υπάρχει ανάλυση ακόμα. Θα εμφανιστεί μόλις τρέξει σωστά το AI pipeline.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Latest projections table */}
+      {latestPreds.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm">Προβλέψεις</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                ({latestPredDate})
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ορίζοντας</TableHead>
+                    <TableHead className="text-right">Bear</TableHead>
+                    <TableHead className="text-right">Base</TableHead>
+                    <TableHead className="text-right">Bull</TableHead>
+                    <TableHead className="text-right">Bear %</TableHead>
+                    <TableHead className="text-right">Base %</TableHead>
+                    <TableHead className="text-right">Bull %</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {["d1", "w1", "m1", "m3", "m6", "y1"].map((h) => {
+                    const pred = latestPreds.find((p) => p.horizon === h);
+                    if (!pred) return null;
+                    const pctBear = ((pred.bear - pred.price0) / pred.price0) * 100;
+                    const pctBase = ((pred.base - pred.price0) / pred.price0) * 100;
+                    const pctBull = ((pred.bull - pred.price0) / pred.price0) * 100;
+                    return (
+                      <TableRow key={h}>
+                        <TableCell className="font-medium">
+                          {HORIZON_LABELS[h]}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          ${pred.bear.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          ${pred.base.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          ${pred.bull.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-red-500/70 dark:text-red-400/70">
+                          {pctBear >= 0 ? "+" : ""}{pctBear.toFixed(1)}%
+                        </TableCell>
+                        <TableCell className={`text-right font-mono font-semibold ${
+                          pctBase >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                        }`}>
+                          {pctBase >= 0 ? "+" : ""}{pctBase.toFixed(1)}%
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-green-500/70 dark:text-green-400/70">
+                          {pctBull >= 0 ? "+" : ""}{pctBull.toFixed(1)}%
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              Vol: {(latestPreds[0].vol * 100).toFixed(1)}% · Mu: {(latestPreds[0].mu * 100).toFixed(1)}% · Score: {latestPreds[0].score}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="chart">
         <TabsList>
           <TabsTrigger value="chart">Γράφημα</TabsTrigger>
           <TabsTrigger value="timeline">Χρονολόγιο</TabsTrigger>
-          <TabsTrigger value="analyst">Αναλυτές</TabsTrigger>
+          <TabsTrigger value="news">Ειδήσεις</TabsTrigger>
           <TabsTrigger value="diagnostics">Διαγνωστικά</TabsTrigger>
         </TabsList>
 
@@ -230,145 +512,72 @@ export function StockClient({
                 Δεν υπάρχουν αναλύσεις ακόμα.
               </p>
             )}
-            {judgments.map((j, i) => {
-              const dayNews = news.filter((n) => n.date === j.date);
-              return (
-                <Card key={i}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">{j.date}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`font-bold ${scoreColor(j.score)}`}
-                        >
-                          Score: {j.score > 0 ? `+${j.score}` : j.score}
-                        </span>
-                        {j.is_event && (
-                          <Badge variant="destructive">EVENT</Badge>
-                        )}
-                        {j.tags.map((t) => (
-                          <Badge key={t} variant="outline" className="text-[10px]">
-                            {t}
-                          </Badge>
-                        ))}
-                      </div>
+            {judgments.map((j, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">{j.date}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-bold ${scoreColor(j.score)}`}
+                      >
+                        Score: {j.score > 0 ? `+${j.score}` : j.score}
+                      </span>
+                      {j.is_event && (
+                        <Badge variant="destructive">EVENT</Badge>
+                      )}
+                      {j.tags.map((t) => (
+                        <Badge key={t} variant="outline" className="text-[10px]">
+                          {t}
+                        </Badge>
+                      ))}
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    {j.summary && (
-                      <p className="text-sm mb-2">{j.summary}</p>
-                    )}
-                    {j.why && (
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {j.why}
-                      </p>
-                    )}
-                    {dayNews.length > 0 && (
-                      <ul className="space-y-1 mt-2">
-                        {dayNews.map((n, ni) => (
-                          <li key={ni} className="text-xs">
-                            <a
-                              href={n.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                              {n.title}
-                            </a>
-                            <span className="text-muted-foreground ml-1">
-                              — {n.source_name}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {j.summary && (
+                    <p className="text-sm mb-2">{j.summary}</p>
+                  )}
+                  {j.why && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {j.why}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
 
-        {/* Analyst data */}
-        <TabsContent value="analyst">
-          <Card>
-            <CardContent className="pt-6">
-              {latest ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <div>
-                    <span className="text-xs text-muted-foreground">P/E</span>
-                    <p className="font-mono">
-                      {latest.pe?.toFixed(1) ?? "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      Forward P/E
-                    </span>
-                    <p className="font-mono">
-                      {latest.fpe?.toFixed(1) ?? "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      Rating
-                    </span>
-                    <p className="font-mono">
-                      {latest.rating?.toFixed(1) ?? "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      Target
-                    </span>
-                    <p className="font-mono">
-                      {latest.target ? `$${latest.target.toFixed(2)}` : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      Αναλυτές
-                    </span>
-                    <p className="font-mono">{latest.analysts ?? "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Beta</span>
-                    <p className="font-mono">
-                      {latest.beta?.toFixed(2) ?? "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      52w Low
-                    </span>
-                    <p className="font-mono">
-                      {latest.low52 ? `$${latest.low52.toFixed(2)}` : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      52w High
-                    </span>
-                    <p className="font-mono">
-                      {latest.high52 ? `$${latest.high52.toFixed(2)}` : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">
-                      Επόμενα κέρδη
-                    </span>
-                    <p className="font-mono">
-                      {latest.next_earnings ?? "—"}
-                    </p>
-                  </div>
+        {/* News */}
+        <TabsContent value="news">
+          <div className="space-y-2">
+            {news.length === 0 && (
+              <p className="text-muted-foreground">
+                Δεν υπάρχουν ειδήσεις.
+              </p>
+            )}
+            {news.map((n, i) => (
+              <div key={i} className="flex items-start gap-3 py-2 border-b last:border-0">
+                <span className="text-xs text-muted-foreground whitespace-nowrap pt-0.5">
+                  {n.date}
+                </span>
+                <div className="min-w-0">
+                  <a
+                    href={n.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {n.title}
+                  </a>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {n.source_name}
+                  </span>
                 </div>
-              ) : (
-                <p className="text-muted-foreground">
-                  Δεν υπάρχουν δεδομένα αναλυτών.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ))}
+          </div>
         </TabsContent>
 
         {/* Diagnostics */}
